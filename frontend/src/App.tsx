@@ -291,21 +291,25 @@ export default function App() {
                         </div>
 
                         {/* Table subheader */}
-                        <div className="grid grid-cols-4 text-xs font-semibold text-muted mb-4 pb-2 border-b border-white/10 uppercase tracking-wider">
+                        <div className="grid grid-cols-5 text-xs font-semibold text-muted mb-4 pb-2 border-b border-white/10 uppercase tracking-wider items-center">
                             <span className="col-span-2">Name</span>
                             <span className="text-right">Price</span>
                             <span className="text-right">Change</span>
+                            <span className="text-right">Wait Area</span>
                         </div>
 
                         <div className="flex-1 overflow-y-auto space-y-1">
                             <AnimatePresence>
                                 {portfolio.map((stock, i) => (
-                                    <motion.div
+                                    <motion.a
+                                        href={`https://finance.yahoo.com/quote/${stock.ticker}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                         key={stock.ticker}
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.4 + i * 0.05 }}
-                                        className="grid grid-cols-4 items-center p-3 hover:bg-white/5 rounded-xl transition-colors cursor-pointer"
+                                        className="grid grid-cols-5 items-center p-3 hover:bg-white/5 rounded-xl transition-colors cursor-pointer block"
                                     >
                                         <div className="col-span-2 flex items-center gap-3">
                                             {/* Stock Icon Circle */}
@@ -314,7 +318,7 @@ export default function App() {
                                             </div>
                                             <div>
                                                 <div className="font-bold text-sm text-white">{stock.nombre}</div>
-                                                <div className="text-xs text-muted">{stock.ticker.replace('.MX', '')}</div>
+                                                <div className="text-xs text-muted hover:text-primary transition-colors">{stock.ticker.replace('.MX', '')} ↗</div>
                                             </div>
                                         </div>
 
@@ -325,7 +329,13 @@ export default function App() {
                                         <div className={`text-right font-bold text-sm ${stock.variacion_pct >= 0 ? 'text-success' : 'text-danger'}`}>
                                             {stock.variacion_pct >= 0 ? '+' : ''}{stock.variacion_pct.toFixed(2)}%
                                         </div>
-                                    </motion.div>
+
+                                        <div className="text-right flex justify-end">
+                                            {stock.estado === 'TARGET' && <span className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-success/20 text-success border border-success/30">SELL 🟢</span>}
+                                            {stock.estado === 'STOP' && <span className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-danger/20 text-danger border border-danger/30">SELL 🔴</span>}
+                                            {stock.estado !== 'TARGET' && stock.estado !== 'STOP' && <span className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-white/10 text-white/70 border border-white/20">HOLD 🟡</span>}
+                                        </div>
+                                    </motion.a>
                                 ))}
                             </AnimatePresence>
                         </div>
