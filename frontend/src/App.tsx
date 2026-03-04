@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import ReactMarkdown from 'react-markdown';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = 'https://api-proyecto-mercado.onrender.com/api';
 
 interface StockData {
     ticker: string;
