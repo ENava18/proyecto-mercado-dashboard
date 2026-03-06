@@ -2,16 +2,34 @@ import yfinance as yf
 import pandas as pd
 import datetime
 import requests # Básico para buscar titulares (usando API pública de RSS o simulación)
+import json
+import os
 
 # Configuración del Portafolio Elegido
-PORTAFOLIO = {
-    "VESTA.MX": {"Nombre": "Vesta", "Entrada_Estimada": 59.27, "Cantidad": 6931, "Target_Ganancia": 63.76, "Stop_Loss": 56.97},
-    "GMEXICOB.MX": {"Nombre": "Grupo México", "Entrada_Estimada": 207.67, "Cantidad": 1985, "Target_Ganancia": 222.21, "Stop_Loss": 198.54},
-    "LABB.MX": {"Nombre": "Genomma Lab", "Entrada_Estimada": 17.34, "Cantidad": 18948, "Target_Ganancia": 18.98, "Stop_Loss": 16.96},
-    "GCARSOA1.MX": {"Nombre": "Grupo Carso", "Entrada_Estimada": 125.79, "Cantidad": 2655, "Target_Ganancia": 134.65, "Stop_Loss": 120.31},
-    "KIMBERA.MX": {"Nombre": "Kimberly Clark", "Entrada_Estimada": 42.61, "Cantidad": 5879, "Target_Ganancia": 45.47, "Stop_Loss": 40.63},
-    "BBAJIOO.MX": {"Nombre": "BanBajio", "Entrada_Estimada": 55.42, "Cantidad": 4492, "Target_Ganancia": 59.72, "Stop_Loss": 53.36}
-}
+PORTAFOLIO_FILE = os.path.join(os.path.dirname(__file__), 'portafolio.json')
+
+def load_portfolio():
+    if not os.path.exists(PORTAFOLIO_FILE):
+        default_portfolio = {
+            "VESTA.MX": {"Nombre": "Vesta", "Entrada_Estimada": 59.27, "Cantidad": 6931, "Target_Ganancia": 63.76, "Stop_Loss": 56.97},
+            "GMEXICOB.MX": {"Nombre": "Grupo México", "Entrada_Estimada": 207.67, "Cantidad": 1985, "Target_Ganancia": 222.21, "Stop_Loss": 198.54},
+            "LABB.MX": {"Nombre": "Genomma Lab", "Entrada_Estimada": 17.34, "Cantidad": 18948, "Target_Ganancia": 18.98, "Stop_Loss": 16.96},
+            "GCARSOA1.MX": {"Nombre": "Grupo Carso", "Entrada_Estimada": 125.79, "Cantidad": 2655, "Target_Ganancia": 134.65, "Stop_Loss": 120.31},
+            "KIMBERA.MX": {"Nombre": "Kimberly Clark", "Entrada_Estimada": 42.61, "Cantidad": 5879, "Target_Ganancia": 45.47, "Stop_Loss": 40.63},
+            "BBAJIOO.MX": {"Nombre": "BanBajio", "Entrada_Estimada": 55.42, "Cantidad": 4492, "Target_Ganancia": 59.72, "Stop_Loss": 53.36}
+        }
+        with open(PORTAFOLIO_FILE, 'w', encoding='utf-8') as f:
+            json.dump(default_portfolio, f, indent=4, ensure_ascii=False)
+        return default_portfolio
+    else:
+        with open(PORTAFOLIO_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+
+def save_portfolio(data):
+    with open(PORTAFOLIO_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+PORTAFOLIO = load_portfolio()
 EFECTIVO = 8134.27
 
 # Límites de la estrategia (3.5% SL, 8% Target)

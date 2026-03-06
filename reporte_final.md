@@ -61,3 +61,5 @@ Para proteger nuestro liderazgo en el Torneo, se ha implementado mediante Python
 *   **Regla de Take Profit:** Retirada quirúrgica al llegar entre +6% a +8% de *Alpha* en cualquiera de las posiciones asimétricas.
 
 *Última actualización de análisis: 2026-03-04 11:34:33*
+
+*Última actualización de análisis (API): 2026-03-04 14:28:54*

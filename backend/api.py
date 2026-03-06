@@ -9,9 +9,13 @@ from pydantic import BaseModel
 
 # Adjust path to import from the parent directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from daily_monitor import PORTAFOLIO, LIMITE_TARGET, LIMITE_STOP_LOSS, obtener_precios_actuales, EFECTIVO
+from daily_monitor import PORTAFOLIO, LIMITE_TARGET, LIMITE_STOP_LOSS, obtener_precios_actuales, EFECTIVO, save_portfolio
 
 app = FastAPI(title="Swing Trading API")
+
+class UpdateSharesRequest(BaseModel):
+    ticker: str
+    cantidad: int
 
 # Configure CORS
 app.add_middleware(
@@ -53,6 +57,7 @@ def get_portfolio():
             "nombre": info["Nombre"],
             "precio_entrada": p_entrada,
             "precio_actual": round(p_actual, 2),
+            "cantidad": cantidad,
             "target": info["Target_Ganancia"],
             "variacion_pct": round(var_pct * 100, 2),
             "estado": status_text
@@ -76,9 +81,9 @@ def get_portfolio():
 
 @app.get("/api/news")
 def get_news():
-    news_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'noticias_catalizadores.md'))
+    news_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'reporte_final.md'))
     if not os.path.exists(news_file):
-        raise HTTPException(status_code=404, detail="File noticias_catalizadores.md not found")
+        raise HTTPException(status_code=404, detail="File reporte_final.md not found")
         
     try:
         with open(news_file, "r", encoding="utf-8") as f:
@@ -86,6 +91,22 @@ def get_news():
         return {"content": content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/portfolio/update")
+def update_portfolio_shares(request: UpdateSharesRequest):
+    if request.ticker not in PORTAFOLIO:
+        raise HTTPException(status_code=404, detail="Ticker not found in portfolio")
+    
+    # Update the dictionary in memory
+    PORTAFOLIO[request.ticker]["Cantidad"] = request.cantidad
+    
+    # Save the updated dictionary to the JSON file
+    try:
+        save_portfolio(PORTAFOLIO)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save changes: {str(e)}")
+        
+    return {"message": f"Successfully updated {request.ticker} to {request.cantidad} shares"}
 
 async def run_analysis_task():
     try:

@@ -1,0 +1,44 @@
+{
+    "VESTA.MX": {
+        "Nombre": "Vesta",
+        "Entrada_Estimada": 59.27,
+        "Cantidad": 6931,
+        "Target_Ganancia": 63.76,
+        "Stop_Loss": 56.97
+    },
+    "GMEXICOB.MX": {
+        "Nombre": "Grupo México",
+        "Entrada_Estimada": 207.67,
+        "Cantidad": 1985,
+        "Target_Ganancia": 222.21,
+        "Stop_Loss": 198.54
+    },
+    "LABB.MX": {
+        "Nombre": "Genomma Lab",
+        "Entrada_Estimada": 17.34,
+        "Cantidad": 18948,
+        "Target_Ganancia": 18.98,
+        "Stop_Loss": 16.96
+    },
+    "GCARSOA1.MX": {
+        "Nombre": "Grupo Carso",
+        "Entrada_Estimada": 125.79,
+        "Cantidad": 2655,
+        "Target_Ganancia": 134.65,
+        "Stop_Loss": 120.31
+    },
+    "KIMBERA.MX": {
+        "Nombre": "Kimberly Clark",
+        "Entrada_Estimada": 42.61,
+        "Cantidad": 5879,
+        "Target_Ganancia": 45.47,
+        "Stop_Loss": 40.63
+    },
+    "BBAJIOO.MX": {
+        "Nombre": "BanBajio",
+        "Entrada_Estimada": 55.42,
+        "Cantidad": 4492,
+        "Target_Ganancia": 59.72,
+        "Stop_Loss": 53.36
+    }
+}

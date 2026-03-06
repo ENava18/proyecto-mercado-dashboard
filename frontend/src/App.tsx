@@ -14,6 +14,7 @@ interface StockData {
     nombre: string;
     precio_entrada: number;
     precio_actual: number;
+    cantidad: number;
     target: number;
     variacion_pct: number;
     estado: string;
@@ -33,6 +34,8 @@ export default function App() {
     const [loading, setLoading] = useState(true);
     const [analyzing, setAnalyzing] = useState(false);
     const [mockChartData, setMockChartData] = useState<any[]>([]);
+    const [editingShares, setEditingShares] = useState<string | null>(null);
+    const [editValue, setEditValue] = useState<string>('');
 
     const fetchDashboardData = async () => {
         try {
@@ -99,6 +102,24 @@ export default function App() {
         } catch (err) {
             console.error(err);
             setAnalyzing(false);
+        }
+    };
+
+    const handleSaveShares = async (ticker: string) => {
+        try {
+            const quantity = parseInt(editValue, 10);
+            if (isNaN(quantity) || quantity < 0) return;
+
+            await axios.post(`${API_BASE}/portfolio/update`, {
+                ticker,
+                cantidad: quantity
+            });
+
+            setEditingShares(null);
+            fetchDashboardData();
+        } catch (err) {
+            console.error("Error updating shares:", err);
+            alert("No se pudo actualizar la cantidad de acciones.");
         }
     };
 
@@ -291,9 +312,10 @@ export default function App() {
                         </div>
 
                         {/* Table subheader */}
-                        <div className="grid grid-cols-5 text-xs font-semibold text-muted mb-4 pb-2 border-b border-white/10 uppercase tracking-wider items-center">
+                        <div className="grid grid-cols-6 text-xs font-semibold text-muted mb-4 pb-2 border-b border-white/10 uppercase tracking-wider items-center">
                             <span className="col-span-2">Name</span>
                             <span className="text-right">Price</span>
+                            <span className="text-right">Shares</span>
                             <span className="text-right">Change</span>
                             <span className="text-right">Wait Area</span>
                         </div>
@@ -301,24 +323,27 @@ export default function App() {
                         <div className="flex-1 overflow-y-auto space-y-1">
                             <AnimatePresence>
                                 {portfolio.map((stock, i) => (
-                                    <motion.a
-                                        href={`https://finance.yahoo.com/quote/${stock.ticker}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                    <motion.div
                                         key={stock.ticker}
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.4 + i * 0.05 }}
-                                        className="grid grid-cols-5 items-center p-3 hover:bg-white/5 rounded-xl transition-colors cursor-pointer block"
+                                        className="grid grid-cols-6 items-center p-3 hover:bg-white/5 rounded-xl transition-colors"
                                     >
                                         <div className="col-span-2 flex items-center gap-3">
                                             {/* Stock Icon Circle */}
-                                            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-bold text-xs text-white">
+                                            <a
+                                                href={`https://finance.yahoo.com/quote/${stock.ticker}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-bold text-xs text-white hover:bg-primary transition-colors cursor-pointer"
+                                                title="Ver en Yahoo Finance"
+                                            >
                                                 {stock.ticker.substring(0, 2)}
-                                            </div>
+                                            </a>
                                             <div>
                                                 <div className="font-bold text-sm text-white">{stock.nombre}</div>
-                                                <div className="text-xs text-muted hover:text-primary transition-colors">{stock.ticker.replace('.MX', '')} ↗</div>
+                                                <div className="text-xs text-muted">{stock.ticker.replace('.MX', '')}</div>
                                             </div>
                                         </div>
 
@@ -326,16 +351,48 @@ export default function App() {
                                             ${stock.precio_actual.toFixed(2)}
                                         </div>
 
+                                        <div className="text-right font-mono text-sm text-white flex justify-end items-center gap-2" onClick={(e) => e.preventDefault()}>
+                                            {editingShares === stock.ticker ? (
+                                                <div className="flex items-center gap-1 bg-surface/80 rounded-md overflow-hidden border border-white/10">
+                                                    <input
+                                                        type="number"
+                                                        value={editValue}
+                                                        onChange={(e) => setEditValue(e.target.value)}
+                                                        className="w-16 bg-transparent text-white text-right px-1 py-0.5 outline-none text-xs"
+                                                        autoFocus
+                                                    />
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleSaveShares(stock.ticker); }}
+                                                        className="px-2 py-0.5 bg-primary/20 hover:bg-primary/40 text-primary text-xs transition-colors"
+                                                    >
+                                                        ✓
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    className="flex items-center gap-2 cursor-pointer group"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setEditingShares(stock.ticker);
+                                                        setEditValue(stock.cantidad.toString());
+                                                    }}
+                                                >
+                                                    <span>{stock.cantidad.toLocaleString('es-MX')}</span>
+                                                    <span className="opacity-0 group-hover:opacity-100 text-muted transition-opacity">✎</span>
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <div className={`text-right font-bold text-sm ${stock.variacion_pct >= 0 ? 'text-success' : 'text-danger'}`}>
                                             {stock.variacion_pct >= 0 ? '+' : ''}{stock.variacion_pct.toFixed(2)}%
                                         </div>
 
                                         <div className="text-right flex justify-end">
-                                            {stock.estado === 'TARGET' && <span className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-success/20 text-success border border-success/30">SELL 🟢</span>}
-                                            {stock.estado === 'STOP' && <span className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-danger/20 text-danger border border-danger/30">SELL 🔴</span>}
+                                            {stock.estado === 'TARGET' && <button onClick={(e) => { e.stopPropagation(); alert("Sugerencia: Revisa el Informe Diario (sección 'Top Candidatos Cuantitativos') para buscar un reemplazo para esta acción."); }} className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-success/20 text-success border border-success/30 hover:bg-success/30 transition-colors cursor-pointer">SELL 🟢</button>}
+                                            {stock.estado === 'STOP' && <button onClick={(e) => { e.stopPropagation(); alert("Sugerencia: Revisa el Informe Diario (sección 'Top Candidatos Cuantitativos') para buscar un reemplazo para esta acción."); }} className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-danger/20 text-danger border border-danger/30 hover:bg-danger/30 transition-colors cursor-pointer">SELL 🔴</button>}
                                             {stock.estado !== 'TARGET' && stock.estado !== 'STOP' && <span className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-white/10 text-white/70 border border-white/20">HOLD 🟡</span>}
                                         </div>
-                                    </motion.a>
+                                    </motion.div>
                                 ))}
                             </AnimatePresence>
                         </div>
