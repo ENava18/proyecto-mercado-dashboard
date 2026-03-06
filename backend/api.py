@@ -17,6 +17,12 @@ class UpdateSharesRequest(BaseModel):
     ticker: str
     cantidad: int
 
+class SwapSharesRequest(BaseModel):
+    old_ticker: str
+    new_ticker: str
+    new_cantidad: int
+    new_precio: float
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -162,6 +168,31 @@ def update_portfolio_shares(request: UpdateSharesRequest):
         raise HTTPException(status_code=500, detail=f"Failed to save changes: {str(e)}")
         
     return {"message": f"Successfully updated {request.ticker} to {request.cantidad} shares"}
+
+@app.post("/api/portfolio/swap")
+def swap_portfolio_shares(request: SwapSharesRequest):
+    if request.old_ticker not in PORTAFOLIO:
+        raise HTTPException(status_code=404, detail="Old ticker not found in portfolio")
+        
+    # Extraer el nombre simple asumiendo que el request `new_ticker` está en la lista estándar, o dejar fallback
+    nuevo_nombre = request.new_ticker.replace('.MX', '')
+    
+    # Remove old, add new
+    del PORTAFOLIO[request.old_ticker]
+    PORTAFOLIO[request.new_ticker] = {
+        "Nombre": nuevo_nombre,
+        "Entrada_Estimada": request.new_precio,
+        "Cantidad": request.new_cantidad,
+        "Target_Ganancia": round(request.new_precio * (1 + LIMITE_TARGET), 2),
+        "Stop_Loss": round(request.new_precio * (1 + LIMITE_STOP_LOSS), 2)
+    }
+    
+    try:
+        save_portfolio(PORTAFOLIO)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save changes: {str(e)}")
+        
+    return {"message": f"Successfully swapped {request.old_ticker} for {request.new_ticker}"}
 
 async def run_analysis_task():
     try:

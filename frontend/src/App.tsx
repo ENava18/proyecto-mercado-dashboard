@@ -123,14 +123,59 @@ export default function App() {
         }
     };
 
-    const handleSellClick = async (e: React.MouseEvent) => {
+    const handleSellClick = async (e: React.MouseEvent, stock: StockData) => {
         e.stopPropagation();
         try {
+            // First get the recommendation
             const res = await axios.get(`${API_BASE}/recommendation`);
-            alert(`Sugerencia de Reemplazo:\n\nEl sistema cuantitativo sugiere reemplazar esta acción por: ${res.data.recommendation}\n\nRevisa el Informe Diario para más detalles.`);
+            const recommendedTicker = res.data.recommendation;
+
+            if (recommendedTicker === "No se encontró el análisis técnico reciente." || recommendedTicker === "No hay nuevas opciones que superen el filtro actual.") {
+                alert(`Sugerencia:\n\n${recommendedTicker}\n\nRevisa el Informe Diario para más detalles.`);
+                return;
+            }
+
+            // Ask the user to confirm the swap
+            const isConfirmed = window.confirm(
+                `⚡ SUGERENCIA DE ESTRATEGIA SWING ⚡\n\n` +
+                `El sistema aconseja vender toda tu posición de ${stock.ticker} hoy.\n` +
+                `Basado en análisis cuantitativo, el mejor reemplazo actual es: ${recommendedTicker}\n\n` +
+                `¿Deseas EJECUTAR ESTE CAMBIO en tu portafolio ahora mismo?\n` +
+                `(Se venderán tus acciones de ${stock.ticker} y se comprará ${recommendedTicker} con ese efectivo equivalente).`
+            );
+
+            if (isConfirmed) {
+                // We need to fetch the current price of the recommended ticker.
+                // Since we don't have it directly here, we could pass a slightly simplified logic 
+                // or just ask the user to input the execution price.
+                // Let's ask the user for the execution price of the NEW ticker to register it correctly.
+                const priceStr = window.prompt(`Ingresa el Precio de Ejecución por acción de ${recommendedTicker} (ej. 45.50):`, "0.00");
+                if (!priceStr) return;
+
+                const newPrice = parseFloat(priceStr);
+                if (isNaN(newPrice) || newPrice <= 0) {
+                    alert("Precio inválido. Operación cancelada.");
+                    return;
+                }
+
+                // Calculate shares
+                const valorLiberado = stock.cantidad * stock.precio_actual;
+                const newCantidad = Math.floor(valorLiberado / newPrice);
+
+                await axios.post(`${API_BASE}/portfolio/swap`, {
+                    old_ticker: stock.ticker,
+                    new_ticker: recommendedTicker,
+                    new_cantidad: newCantidad,
+                    new_precio: newPrice
+                });
+
+                alert(`¡Éxito! Cambio registrado en tu portafolio.\nVendiste ${stock.ticker}.\nAdquiriste ${newCantidad} acciones de ${recommendedTicker}.`);
+                fetchDashboardData();
+            }
+
         } catch (err) {
-            console.error("Error fetching recommendation:", err);
-            alert("Sugerencia: Revisa el Informe Diario (sección 'Top Candidatos Cuantitativos') para buscar un reemplazo para esta acción.");
+            console.error("Error executing swap recommendation:", err);
+            alert("Ocurrió un error al procesar la recomendación. Revisa la consola.");
         }
     };
 
@@ -399,8 +444,8 @@ export default function App() {
                                         </div>
 
                                         <div className="text-right flex justify-end">
-                                            {stock.estado === 'TARGET' && <button onClick={handleSellClick} className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-success/20 text-success border border-success/30 hover:bg-success/30 transition-colors cursor-pointer">SELL 🟢</button>}
-                                            {stock.estado === 'STOP' && <button onClick={handleSellClick} className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-danger/20 text-danger border border-danger/30 hover:bg-danger/30 transition-colors cursor-pointer">SELL 🔴</button>}
+                                            {stock.estado === 'TARGET' && <button onClick={(e) => handleSellClick(e, stock)} className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-success/20 text-success border border-success/30 hover:bg-success/30 transition-colors cursor-pointer">SELL 🟢</button>}
+                                            {stock.estado === 'STOP' && <button onClick={(e) => handleSellClick(e, stock)} className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-danger/20 text-danger border border-danger/30 hover:bg-danger/30 transition-colors cursor-pointer">SELL 🔴</button>}
                                             {stock.estado !== 'TARGET' && stock.estado !== 'STOP' && <span className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-white/10 text-white/70 border border-white/20">HOLD 🟡</span>}
                                         </div>
                                     </motion.div>
