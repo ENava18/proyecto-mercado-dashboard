@@ -76,30 +76,88 @@ def buscar_noticias_ticker(ticker_name):
         pass
     return "No hay titulares recientes relevantes detectados hoy."
 
+def obtener_recomendacion_reemplazo(cantidad_efectivo):
+    # Retrieve the top candidate not in portfolio from technical analysis
+    analysis_file = os.path.join(os.path.dirname(__file__), 'analisis_tecnico_resultados.md')
+    if not os.path.exists(analysis_file):
+        return None, 0
+        
+    try:
+        with open(analysis_file, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            
+        in_table = False
+        candidates = []
+        for line in lines:
+            if "| Ticker" in line:
+                in_table = True
+                continue
+            if in_table and "|---" in line:
+                continue
+            if in_table and line.strip().startswith("|"):
+                parts = line.split("|")
+                if len(parts) > 2:
+                    ticker = parts[1].strip()
+                    price_str = parts[2].strip().replace('$', '').replace(',', '')
+                    try:
+                        price = float(price_str)
+                    except ValueError:
+                        price = 0.0
+                    candidates.append({"ticker": ticker, "price": price})
+            elif in_table and not line.strip():
+                in_table = False
+                
+        for cand in candidates:
+            price_val = float(cand["price"])
+            if cand["ticker"] not in PORTAFOLIO and price_val > 0.0:
+                cantidad_a_comprar = int(cantidad_efectivo // price_val)
+                return cand["ticker"], cantidad_a_comprar
+                
+    except Exception as e:
+        print("Error leyendo recomendaciones:", e)
+        
+    return None, 0
+
 def main():
-    print(f"\n--- REPORTE DIARIO DE MONITOREO BMV - SWING TRADING ({HOY}) ---\n")
-    
     precios_vivos = obtener_precios_actuales()
     
-    print("-" * 120)
-    print(f"{'Ticker':<12} | {'Precio Act':<10} | {'Costo Ent.':<10} | {'Variación':<10} | {'Estado Alerta':<80}")
-    print("-" * 120)
+    report_file = os.path.join(os.path.dirname(__file__), f"reporte_diario_{HOY}.md")
     
-    for ticker, info in PORTAFOLIO.items():
-        precio_entrada = info["Entrada_Estimada"]
-        precio_actual = precios_vivos.get(ticker, precio_entrada)
+    with open(report_file, "w", encoding="utf-8") as f:
+        f.write(f"### Reporte Diario - {HOY}\n\n")
+        f.write("A continuación se muestra el estado actual de sus posiciones:\n\n")
         
-        cambio_pct = (precio_actual - precio_entrada) / precio_entrada
+        recomendaciones_accion = []
         
-        estado = alertar_notificaciones(ticker, cambio_pct)
+        for ticker, info in PORTAFOLIO.items():
+            precio_entrada = float(info["Entrada_Estimada"])
+            precio_actual = float(precios_vivos.get(ticker, precio_entrada))
+            cantidad = int(info["Cantidad"])
+            valor_actual = precio_actual * cantidad
+            
+            cambio_pct = (precio_actual - precio_entrada) / precio_entrada
+            
+            f.write(f"- **{ticker}**: Conservar {cantidad} acciones. (Rendimiento local: {cambio_pct*100:+.2f}%)\n")
+            
+            # Revisar si hay condición de venta:
+            if cambio_pct <= LIMITE_STOP_LOSS or cambio_pct >= LIMITE_TARGET:
+                motivo = "Stop Loss" if cambio_pct <= LIMITE_STOP_LOSS else "Take Profit (Target)"
+                reemplazo, cant_reemplazo = obtener_recomendacion_reemplazo(valor_actual)
+                
+                sugerencia = f"  - ⚠️ **EJECUCIÓN SUGERIDA:** Vender **toda la posición** de {ticker} (por {motivo}). "
+                if reemplazo:
+                    sugerencia += f"Comprar directamente **{cant_reemplazo} acciones** de **{reemplazo}** con el efectivo liberado (${valor_actual:,.2f} MXN)."
+                else:
+                    sugerencia += "Mantener en efectivo."
+                    
+                recomendaciones_accion.append(sugerencia)
         
-        print(f"{ticker:<12} | ${precio_actual:<9.2f} | ${precio_entrada:<9.2f} | {cambio_pct*100:>8.2f}% | {estado}")
-        
-    print("-" * 120)
-    print("\n[Últimos Titulares Detectados]")
-    for ticker in PORTAFOLIO.keys():
-        titular = buscar_noticias_ticker(ticker)
-        print(f" > {ticker}: {titular}")
+        if recomendaciones_accion:
+            f.write("\n### 🚨 Movimientos Estratégicos Recomendados Hoy:\n\n")
+            for rec in recomendaciones_accion:
+                f.write(rec + "\n")
+                
+    print(f"Reporte diario simplificado generado: {report_file}")
         
 if __name__ == "__main__":
     main()

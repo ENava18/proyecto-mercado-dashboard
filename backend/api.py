@@ -166,21 +166,28 @@ def update_portfolio_shares(request: UpdateSharesRequest):
 async def run_analysis_task():
     try:
         root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        process = await asyncio.create_subprocess_exec(
+        # First run the technical analysis to get fresh scores
+        process_ta = await asyncio.create_subprocess_exec(
             "python", "technical_analysis.py",
             cwd=root_dir,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
-        stdout, stderr = await process.communicate()
+        await process_ta.communicate()
         
-        if process.returncode == 0:
-            report_file = os.path.join(root_dir, "reporte_final.md")
-            with open(report_file, "a", encoding="utf-8") as f:
-                f.write(f"\n*Última actualización de análisis (API): {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n")
-            print("Análisis técnico completado.")
+        # Then run daily monitor to generate the report
+        process_dm = await asyncio.create_subprocess_exec(
+            "python", "daily_monitor.py",
+            cwd=root_dir,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process_dm.communicate()
+        
+        if process_dm.returncode == 0:
+            print("Monitoreo diario completado y reporte generado.")
         else:
-            print(f"Error en el análisis técnico: {stderr.decode()}")
+            print(f"Error en el monitoreo diario: {stderr.decode()}")
     except Exception as e:
         print(f"Failed to run task: {e}")
 
