@@ -81,16 +81,71 @@ def get_portfolio():
 
 @app.get("/api/news")
 def get_news():
-    news_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'reporte_final.md'))
-    if not os.path.exists(news_file):
-        raise HTTPException(status_code=404, detail="File reporte_final.md not found")
+    today_str = datetime.datetime.now().strftime('%Y-%m-%d')
+    daily_report = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', f'reporte_diario_{today_str}.md'))
+    
+    # Fallback if no report for today
+    if not os.path.exists(daily_report):
+        # find the most recently modified reporte_diario_*.md
+        directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        reports = [f for f in os.listdir(directory) if f.startswith('reporte_diario_') and f.endswith('.md')]
+        if reports:
+            reports.sort(reverse=True) # Sort lexicographically (by date descending)
+            daily_report = os.path.join(directory, reports[0])
+        else:
+            daily_report = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'reporte_final.md'))
+            
+    if not os.path.exists(daily_report):
+        raise HTTPException(status_code=404, detail="No report found")
         
     try:
-        with open(news_file, "r", encoding="utf-8") as f:
+        with open(daily_report, "r", encoding="utf-8") as f:
             content = f.read()
         return {"content": content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/recommendation")
+def get_recommendation():
+    """
+    Reads the analisis_tecnico_resultados.md to find the top recommended stock 
+    that is NOT currently in the portfolio.
+    """
+    try:
+        analysis_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'analisis_tecnico_resultados.md'))
+        if not os.path.exists(analysis_file):
+            return {"recommendation": "No se encontró el análisis técnico reciente."}
+            
+        with open(analysis_file, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            
+        # Parse the markdown table
+        in_table = False
+        candidates = []
+        for line in lines:
+            if "| Ticker" in line:
+                in_table = True
+                continue
+            if in_table and "|---" in line:
+                continue
+            if in_table and line.strip().startswith("|"):
+                parts = line.split("|")
+                if len(parts) > 1:
+                    ticker = parts[1].strip()
+                    candidates.append(ticker)
+            elif in_table and not line.strip():
+                # End of table
+                in_table = False
+                
+        # Find the first candidate not in portfolio
+        for candidate in candidates:
+            if candidate not in PORTAFOLIO:
+                return {"recommendation": candidate}
+                
+        return {"recommendation": "No hay nuevas opciones que superen el filtro actual."}
+        
+    except Exception as e:
+        return {"recommendation": f"Error al generar recomendación: {str(e)}"}
 
 @app.post("/api/portfolio/update")
 def update_portfolio_shares(request: UpdateSharesRequest):

@@ -123,6 +123,17 @@ export default function App() {
         }
     };
 
+    const handleSellClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            const res = await axios.get(`${API_BASE}/recommendation`);
+            alert(`Sugerencia de Reemplazo:\n\nEl sistema cuantitativo sugiere reemplazar esta acción por: ${res.data.recommendation}\n\nRevisa el Informe Diario para más detalles.`);
+        } catch (err) {
+            console.error("Error fetching recommendation:", err);
+            alert("Sugerencia: Revisa el Informe Diario (sección 'Top Candidatos Cuantitativos') para buscar un reemplazo para esta acción.");
+        }
+    };
+
     return (
         <div className="min-h-screen p-4 md:p-8 text-text overflow-hidden">
             {/* Top Navigation / Brand */}
@@ -287,9 +298,9 @@ export default function App() {
                         >
                             <div className="flex items-center gap-2 mb-4">
                                 <FileText className="w-5 h-5 text-primary" />
-                                <h3 className="text-lg font-bold">Latest Catalysts</h3>
+                                <h3 className="text-lg font-bold">Último Informe Diario</h3>
                             </div>
-                            <div className="h-48 overflow-y-auto pr-4 custom-scrollbar">
+                            <div className="h-96 overflow-y-auto pr-4 custom-scrollbar">
                                 <article className="prose prose-sm prose-invert max-w-none text-muted">
                                     <ReactMarkdown>{news}</ReactMarkdown>
                                 </article>
@@ -388,8 +399,8 @@ export default function App() {
                                         </div>
 
                                         <div className="text-right flex justify-end">
-                                            {stock.estado === 'TARGET' && <button onClick={(e) => { e.stopPropagation(); alert("Sugerencia: Revisa el Informe Diario (sección 'Top Candidatos Cuantitativos') para buscar un reemplazo para esta acción."); }} className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-success/20 text-success border border-success/30 hover:bg-success/30 transition-colors cursor-pointer">SELL 🟢</button>}
-                                            {stock.estado === 'STOP' && <button onClick={(e) => { e.stopPropagation(); alert("Sugerencia: Revisa el Informe Diario (sección 'Top Candidatos Cuantitativos') para buscar un reemplazo para esta acción."); }} className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-danger/20 text-danger border border-danger/30 hover:bg-danger/30 transition-colors cursor-pointer">SELL 🔴</button>}
+                                            {stock.estado === 'TARGET' && <button onClick={handleSellClick} className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-success/20 text-success border border-success/30 hover:bg-success/30 transition-colors cursor-pointer">SELL 🟢</button>}
+                                            {stock.estado === 'STOP' && <button onClick={handleSellClick} className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-danger/20 text-danger border border-danger/30 hover:bg-danger/30 transition-colors cursor-pointer">SELL 🔴</button>}
                                             {stock.estado !== 'TARGET' && stock.estado !== 'STOP' && <span className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-white/10 text-white/70 border border-white/20">HOLD 🟡</span>}
                                         </div>
                                     </motion.div>
